@@ -35,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.1.0
       - name: Install Python
         uses: actions/setup-python@v4.2.0
         with:
@@ -44,13 +44,13 @@ jobs:
           python-version: ${{ inputs.python_version }}
       - run: pip install -r requirements-dev.txt
       - run: pip install -r requirements-mac-build.txt
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.1.0
         with:
           repository: Arelle/EdgarRenderer
           path: arelle/plugin/EdgarRenderer
           ref: ${{ inputs.edgar_renderer_ref }}
       - run: rm -rf arelle/plugin/EdgarRenderer/.git
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.1.0
         with:
           repository: xbrlus/xule
           path: tmp
@@ -60,7 +60,7 @@ jobs:
           rm -rf tmp/plugin/validate
           mv tmp/plugin/* arelle/plugin/
           rm -rf tmp
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.1.0
         with:
           repository: Workiva/ixbrl-viewer
           path: tmp/ixbrl-viewer
