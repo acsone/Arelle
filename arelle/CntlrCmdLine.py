@@ -20,6 +20,7 @@ from arelle.ModelFormulaObject import FormulaOptions
 from arelle import PluginManager
 from arelle.PluginManager import pluginClassMethods
 from arelle.UrlUtil import isHttpUrl
+from arelle.ValidateXbrl import ValidateXbrl
 from arelle.Version import copyrightLabel
 from arelle.WebCache import proxyTuple
 from arelle.SystemInfo import get_system_info
@@ -1045,9 +1046,11 @@ class CntlrCmdLine(Cntlr.Cntlr):
                         startedAt = time.time()
                         if not options.validate:
                             ValidateXbrlDimensions.loadDimensionDefaults(modelXbrl)
+                        val: ValidateXbrl = ValidateXbrl(modelXbrl)
+                        val.modelXbrl = modelXbrl
                         # setup fresh parameters from formula optoins
-                        modelXbrl.parameters = fo.typedParameters(modelXbrl.prefixedNamespaces)
-                        ValidateFormula.validate(modelXbrl, compileOnly=(options.formulaAction != "run"))
+                        val.parameters = fo.typedParameters(modelXbrl.prefixedNamespaces)
+                        ValidateFormula.validate(val, compileOnly=(options.formulaAction != "run"))
                         self.addToLog(format_string(self.modelManager.locale,
                                                     _("formula validation and execution in %.2f secs")
                                                     if options.formulaAction == "run"

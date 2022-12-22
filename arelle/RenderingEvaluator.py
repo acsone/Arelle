@@ -11,6 +11,7 @@ from arelle.ModelRenderingObject import (CHILD_ROLLUP_FIRST, CHILD_ROLLUP_LAST,
                                          ModelFilterDefinitionNode,
                                          ModelDimensionRelationshipDefinitionNode)
 from arelle.ModelValue import (QName)
+from arelle.ValidateXbrl import ValidateXbrl
 
 
 def init(modelXbrl):
@@ -45,11 +46,12 @@ def init(modelXbrl):
 
         modelXbrl.profileStat(None)
 
-        # setup fresh parameters from formula options
-        modelXbrl.parameters = modelXbrl.modelManager.formulaOptions.typedParameters(modelXbrl.prefixedNamespaces)
-
         # validate parameters and custom function signatures
-        ValidateFormula.validate(modelXbrl, xpathContext=modelXbrl.rendrCntx, parametersOnly=True, statusMsg=_("compiling rendering tables"))
+        val: ValidateXbrl = ValidateXbrl(modelXbrl)
+        val.modelXbrl = modelXbrl
+        # setup fresh parameters from formula options
+        val.parameters = modelXbrl.modelManager.formulaOptions.typedParameters(modelXbrl.prefixedNamespaces)
+        ValidateFormula.validate(val, xpathContext=modelXbrl.rendrCntx, parametersOnly=True, statusMsg=_("compiling rendering tables"))
 
         # deprecated as of 2013-05-17
         # check and extract message expressions into compilable programs
