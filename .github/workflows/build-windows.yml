@@ -78,11 +78,11 @@ jobs:
 
     steps:
     - name: Checkout arelle
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v3.6.0
       with:
         fetch-depth: 0
     - name: Checkout EdgarRenderer
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v3.6.0
       with:
         repository: Arelle/EdgarRenderer
         path: arelle/plugin/EdgarRenderer
@@ -90,7 +90,7 @@ jobs:
     - shell: cmd
       run: rmdir /s /q arelle\plugin\EdgarRenderer\.git
     - name: Checkout xule
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v3.6.0
       with:
         repository: xbrlus/xule
         path: xule
@@ -103,14 +103,14 @@ jobs:
     - shell: cmd
       run: rmdir /s /q xule
     - name: Checkout ixbrl-viewer
-      uses: actions/checkout@v3.5.3
+      uses: actions/checkout@v3.6.0
       with:
         fetch-depth: 0
         repository: Workiva/ixbrl-viewer
         path: ixbrl-viewer
         ref: ${{ inputs.ixbrl_viewer_ref }}
     - name: Set up Node JS
-      uses: actions/setup-node@v3.7.0
+      uses: actions/setup-node@v3.8.1
       with:
         node-version: ${{ inputs.node_version }}
     - name: Build ixbrl-viewer
