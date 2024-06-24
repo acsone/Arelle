@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout arelle
-        uses: actions/checkout@v4.1.6
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
       - name: Install Python
@@ -75,7 +75,7 @@ jobs:
           TWINE_REPOSITORY: ${{ github.repository == 'Arelle/Arelle' && 'pypi' || 'testpypi' }}
         run: twine upload ./*
       - name: Upload release artifact
-        uses: softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@v2.0.6
         with:
           fail_on_unmatched_files: true
           files: './*'
