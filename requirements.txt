@@ -1,10 +1,10 @@
 # core modules
-certifi==2024.7.4
-filelock==3.15.4
-lxml==5.2.2
+certifi==2024.8.30
+filelock==3.16.0
+lxml==5.3.0
 OpenPyXL==3.1.5
-pyparsing==3.1.2
-regex==2024.7.24
+pyparsing==3.1.4
+regex==2024.9.11
 isodate==0.6.1
 aniso8601==9.0.1
 CherryPy==18.10.0
@@ -17,8 +17,8 @@ NumPy==1.24.4 ; python_version <= "3.8"
 NumPy==1.26.2 ; python_version > "3.8"
 Matplotlib==3.7.4 ; python_version <= "3.8"
 Matplotlib==3.8.2 ; python_version > "3.8"
-holidays==0.53
-pytz==2024.1
+holidays==0.56
+pytz==2024.2
 Tornado==6.4.1
 # security plugin
 PyCryptodome==3.20.0
