@@ -41,6 +41,12 @@ INF = float("inf")
 RETRIEVAL_RETRY_COUNT = 5
 HTTP_USER_AGENT = 'Mozilla/5.0 (Arelle/{}) Email/NotRegistered@arelle.org'.format(__version__)
 
+DEFAULT_CACHE_REDIRECTS = {
+    # xbrl.org accepts requests to http or https. It also happily accepts requests with or without the WWW subdomain.
+    re.compile(r'^http:\/\/(www\.)?xbrl\.org\/.*'): 'https://www.xbrl.org/{0}',
+    re.compile(r'^https:\/\/(www\.)?xbrl\.org\/.*'): 'http://www.xbrl.org/{0}',
+}
+
 def proxyDirFmt(httpProxyTuple):
     if isinstance(httpProxyTuple,(tuple,list)) and len(httpProxyTuple) == 5:
         useOsProxy, urlAddr, urlPort, user, password = httpProxyTuple
@@ -100,7 +106,7 @@ class WebCache:
         self._noCertificateCheck = False
         self._httpUserAgent = HTTP_USER_AGENT # default user agent for product
         self._httpsRedirect = False
-        self._redirectFallbackMap = {}
+        self._redirectFallbackMap = DEFAULT_CACHE_REDIRECTS.copy()
         self.resetProxies(httpProxyTuple)
 
         self.opener.addheaders = [('User-agent', self.httpUserAgent)]
