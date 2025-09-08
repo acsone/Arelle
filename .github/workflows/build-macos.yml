@@ -91,11 +91,11 @@ jobs:
 
     steps:
       - name: Checkout arelle
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 0
       - name: Install Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v6.0.0
         with:
           cache: 'pip'
           check-latest: true
@@ -104,13 +104,13 @@ jobs:
       - run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements-build.txt
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           repository: Arelle/EDGAR
           path: arelle/plugin/EDGAR
           ref: ${{ inputs.edgar_ref }}
       - run: rm -rf arelle/plugin/EDGAR/.git
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           repository: xbrlus/xule
           path: tmp
