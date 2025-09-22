@@ -1,17 +1,17 @@
 # core modules
 certifi==2025.8.3
 truststore==0.10.1 ; python_version > "3.9"
-filelock==3.18.0
-jsonschema==4.25.0
+filelock==3.19.1
+jsonschema==4.25.1
 lxml==5.4.0
 OpenPyXL==3.1.5
-pyparsing==3.2.3
-regex==2025.7.34
-typing-extensions==4.14.1
+pyparsing==3.2.5
+regex==2025.9.18
+typing-extensions==4.15.0
 isodate==0.7.2
 aniso8601==10.0.1
 bottle==0.13.4
-Cheroot==10.0.1
+Cheroot==11.0.0
 python-dateutil==2.9.0.post0
 pycountry==24.6.1
 # plugins
@@ -20,17 +20,17 @@ NumPy==2.0.2 ; python_version <= "3.9"
 NumPy==2.2.4 ; python_version > "3.9"
 Matplotlib==3.9.4 ; python_version <= "3.9"
 Matplotlib==3.10.1 ; python_version > "3.9"
-holidays==0.77
+holidays==0.81
 pytz==2025.2
-Tornado==6.5.1
+Tornado==6.5.2
 # security plugin
 PyCryptodome==3.23.0
 # xbrlDB plugin
 cx_Oracle==8.3.0
-pg8000==1.31.4
-PyMySQL==1.1.1
+pg8000==1.31.5
+PyMySQL==1.1.2
 pyodbc==5.2.0
-RDFLib==7.1.4
+RDFLib==7.2.1
 # other
 graphviz==0.21
 Pillow==11.3.0
