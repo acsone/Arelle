@@ -60,11 +60,11 @@ jobs:
 
     steps:
       - name: Checkout arelle
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       - name: Checkout EDGAR
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6.0.2
         with:
           repository: Arelle/EDGAR
           path: arelle/plugin/EDGAR
@@ -72,7 +72,7 @@ jobs:
       - name: Cleanup EDGAR
         run: rm -rf arelle/plugin/EDGAR/.git
       - name: Checkout XULE
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6.0.2
         with:
           repository: xbrlus/xule
           path: xule
@@ -85,7 +85,7 @@ jobs:
       - name: Cleanup XULE
         run: rm -rf xule
       - name: Docker setup buildx
-        uses: docker/setup-buildx-action@v3.11.1
+        uses: docker/setup-buildx-action@v3.12.0
       - name: Docker build
         uses: docker/build-push-action@v6.18.0
         with:
@@ -111,13 +111,13 @@ jobs:
         run: |
           echo "ARTIFACT_NAME=arelle-ubuntu.tgz" >> $GITHUB_ENV
       - name: Upload build artifact
-        uses: actions/upload-artifact@v5.0.0
+        uses: actions/upload-artifact@v6.0.0
         with:
           name: ${{ steps.define-artifact-names.outputs.uploaded_artifact_name }}
           if-no-files-found: error
           path: ${{ env.BUILD_ARTIFACT_PATH }}
       - name: "[Test] Set up Python ${{ inputs.python_version }}"
-        uses: actions/setup-python@v6.1.0
+        uses: actions/setup-python@v6.2.0
         with:
           cache: 'pip'
           check-latest: true
@@ -130,7 +130,7 @@ jobs:
           pytest -s --disable-warnings --all-frozen-builds --download-cache --offline --arelle=".test_build/arelleCmdLine" tests/integration_tests/scripts/test_scripts.py
       - name: "[Test] Upload test artifacts"
         if: always()
-        uses: actions/upload-artifact@v5.0.0
+        uses: actions/upload-artifact@v6.0.0
         with:
           name: 'linux test logs'
           if-no-files-found: error
