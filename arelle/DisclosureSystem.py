@@ -6,6 +6,7 @@ import regex as re
 from collections import defaultdict
 from lxml import etree
 from arelle import UrlUtil
+from arelle.utils.mapping.compressed_trie import CompressedTrie
 from arelle.UrlUtil import isHttpUrl
 
 def compileAttrPattern(elt, attrName, flags=None, patternIfNoAttr=""):
@@ -77,7 +78,7 @@ class DisclosureSystem:
         self.standardTaxonomiesUrl = None
         self.mappingsUrl = os.path.join(self.modelManager.cntlr.configDir, "mappings.xml")
         self.mappedFiles = {}
-        self.mappedPaths = []
+        self.mappedPaths = CompressedTrie()
         self.utrUrl = ["http://www.xbrl.org/utr/utr.xml"]
         self.utrStatusFilters = None
         self.utrTypeEntries = None
@@ -396,7 +397,7 @@ class DisclosureSystem:
             for elt in xmldoc.iter(tag="mapFile"):
                 self.mappedFiles[elt.get("from")] = elt.get("to")
             for elt in xmldoc.iter(tag="mapPath"):
-                self.mappedPaths.append((elt.get("from"), elt.get("to")))
+                self.mappedPaths.add(elt.get("from"), elt.get("to"))
         except (EnvironmentError,
                 etree.LxmlError) as err:
             self.modelManager.cntlr.addToLog(_("Disclosure System \"%(name)s\" import %(importFile)s, error: %(error)s"),
@@ -410,20 +411,16 @@ class DisclosureSystem:
             mappedUrl = self.mappedFiles[url]
         else:  # handle mapped paths
             mappedUrl = url
-            for mapFrom, mapTo in self.mappedPaths:
-                if url.startswith(mapFrom):
-                    mappedUrl = mapTo + url[len(mapFrom):]
-                    break
+            mapFrom, mapTo = self.mappedPaths.longest_prefix_match(url)
+            if mapFrom and mapTo:
+                mappedUrl = mapTo + url[len(mapFrom):]
         return mappedUrl
 
     def isMappedUrl(self, url: str) -> bool:
         if url in self.mappedFiles:
             return True
         else:  # handle mapped paths
-            for mapFrom, mapTo in self.mappedPaths:
-                if url.startswith(mapFrom):
-                    return True
-        return False
+            return self.mappedPaths.is_prefix_matching(url)
 
     def uriAuthorityValid(self, uri):
         if self.standardTaxonomiesUrl:
