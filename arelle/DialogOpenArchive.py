@@ -432,7 +432,7 @@ class DialogOpenArchive(Toplevel):
                 if hasattr(self, "taxonomyPackage"):
                     # attempt to unmap the filename to original file
                     # will be mapped again in loading, but this allows schemaLocation to be unmapped
-                    for prefix, remapping in self.taxonomyPackage["remappings"].items():
+                    for prefix, remapping in self.taxonomyPackage["remappings"].to_dict().items():
                         if isHttpUrl(remapping):
                             remapStart = remapping
                         else:

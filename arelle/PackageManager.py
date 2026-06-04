@@ -8,6 +8,7 @@ from typing import Any, IO, TYPE_CHECKING
 from lxml import etree
 
 from arelle.packages._package_manager import PackageManager
+from arelle.utils.mapping.compressed_trie import CompressedTrie
 
 if TYPE_CHECKING:
     from arelle.Cntlr import Cntlr
@@ -76,7 +77,7 @@ def parsePackage(
     metadataFile: str,
     fileBase: str,
     errors: list[str] | None = None,
-) -> dict[str, str | dict[str, str]]:
+) -> dict[str, str | dict[str, str] | CompressedTrie]:
     return PackageManager.parsePackage(
         cntlr,
         filesource,
@@ -91,9 +92,9 @@ def _parsePackageMetadata(
     filesource: FileSource,
     parser: etree.XMLParser,
     metadataFile: str,
-    remappings: dict[str, str],
+    remappings: CompressedTrie,
     errors: list[str],
-) -> dict[str, str | dict[str, str]]:
+) -> dict[str, str | dict[str, str] | CompressedTrie]:
     return PackageManager.parsePackageMetadata(
         cntlr,
         filesource,
@@ -111,7 +112,7 @@ def _parseCatalog(
     catalogFile: str,
     fileBase: str,
     errors: list[str],
-) -> dict[str, str]:
+) -> CompressedTrie:
     return PackageManager.parseCatalog(
         cntlr,
         filesource,
@@ -175,7 +176,7 @@ def packageInfo(
 
 
 def rebuildRemappings(cntlr: Cntlr) -> None:
-    return getInstance().rebuildRemappings(cntlr)
+    getInstance().rebuildRemappings(cntlr)
 
 
 def isMappedUrl(url: str | None) -> bool:

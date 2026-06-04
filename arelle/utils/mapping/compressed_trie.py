@@ -2,7 +2,8 @@
 See COPYRIGHT.md for copyright information.
 """
 
-from typing import Union, Tuple
+from collections.abc import Callable
+from typing import Union, Tuple, Self
 from json import JSONEncoder, JSONDecoder
 
 # ─────────────────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ class CompressedTrie:
         del self.root
         self.root = CompressedNode()
 
-    def toDict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         result = {}
         def traverse(node, prefix):
             if node.value is not None:
@@ -114,7 +115,7 @@ class CompressedTrie:
         traverse(self.root, '')
         return result
 
-    def addFromDict(self, d: dict[str, str], exclude_class_flag: bool = False) -> None:
+    def add_from_dict(self, d: dict[str, str], exclude_class_flag: bool = False) -> Self:
         if exclude_class_flag:
             for key, value in d.items():
                 if key != "__class__":
@@ -122,16 +123,22 @@ class CompressedTrie:
         else:
             for key, value in d.items():
                 self.add(key, value)
+        return self
 
-    def loadFromDict(self, d: dict[str, str], exclude_class_flag: bool = False) -> None:
+    def load_from_dict(self, d: dict[str, str], exclude_class_flag: bool = False) -> Self:
         self.clear()
-        self.addFromDict(d, exclude_class_flag=exclude_class_flag)
+        return self.add_from_dict(d, exclude_class_flag=exclude_class_flag)
 
-    def longest_prefix_match(self, s: str) -> Tuple[Union[str, None], Union[str, None]]:
+    def longest_prefix_match(self, s: str,
+                             stop_condition: Callable[[str, str], bool] | None = None,
+                             post_condition: Callable[[str, str], bool] | None = None) -> Tuple[Union[str, None], Union[str, None]]:
         node = self.root
+        visited = []
         match = None
         i = 0
-        while i < len(s):
+        visited.append((i, match))
+        s_length = len(s)
+        while i < s_length:
             found = False
             for label, child in node.children.items():
                 label_length = len(label)
@@ -140,10 +147,23 @@ class CompressedTrie:
                     node = child
                     if node.value is not None:
                         match = node.value
+                        visited.append((i, match))
+                        if stop_condition and stop_condition(s, match):
+                            i = 0
+                            match = None
+                            found = False
+                            break
                     found = True
                     break
             if not found:
                 break
+        if post_condition:
+            while len(visited) > 1:
+                candidate_i, candidate_match = visited.pop()
+                if post_condition(s, candidate_match):
+                    i = candidate_i
+                    match = candidate_match
+                    break
         longest_prefix = s[:i] if i > 0 else None
         return longest_prefix, match
 
@@ -158,8 +178,11 @@ class CompressedTrie:
         found_prefix, found_value = self.longest_prefix_match(key)
         return found_prefix and found_value is not None
 
+    def is_empty(self) -> bool:
+        return not self.root.children and self.root.value is None
+
     def __len__(self) -> int:
-        return len(self.toDict())
+        return len(self.to_dict())
 
     def __setitem__(self, key: str, value: str) -> None:
         self.add(key, value)
@@ -174,8 +197,9 @@ class CompressedTrie:
 class CompressedTrieEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, CompressedTrie):
-            result = obj.toDict()
+            result = obj.to_dict()
             result["__class__"] = CompressedTrie.NAME
+            return result
         return super().default(obj)
 
 class CompressedTrieDecoder(JSONDecoder):
@@ -185,6 +209,6 @@ class CompressedTrieDecoder(JSONDecoder):
     def object_hook(self, obj):
         if "__class__" in obj and obj["__class__"] == CompressedTrie.NAME:
             trie = CompressedTrie()
-            trie.addFromDict(obj, exclude_class_flag=True)
+            trie.add_from_dict(obj, exclude_class_flag=True)
             return trie
         return obj

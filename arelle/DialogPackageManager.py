@@ -3,6 +3,9 @@ See COPYRIGHT.md for copyright information.
 '''
 from tkinter import simpledialog, Toplevel, font, messagebox, VERTICAL, HORIZONTAL, N, S, E, W
 from tkinter.constants import DISABLED, ACTIVE
+
+from arelle.utils.mapping.compressed_trie import CompressedTrie
+
 try:
     from tkinter.ttk import Treeview, Scrollbar, Frame, Label, Button
 except ImportError:
@@ -255,7 +258,7 @@ class DialogPackageManager(Toplevel):
         for previousNode in self.remappingsView.get_children(""):
             self.remappingsView.delete(previousNode)
 
-        for i, remappingItem in enumerate(sorted(self.packagesConfig.get("remappings", {}).items())):
+        for i, remappingItem in enumerate(sorted(self.packagesConfig.get("remappings", CompressedTrie()).to_dict().items())):
             prefix, remapping = remappingItem
             node = self.remappingsView.insert("", "end", prefix, text=prefix)
             self.remappingsView.set(node, "remapping", remapping)
@@ -291,7 +294,7 @@ class DialogPackageManager(Toplevel):
             self.packageDescrHdr.config(state=ACTIVE)
             self.packageDescrLabel.config(text=packageInfo["description"])
             self.packagePrefixesHdr.config(state=ACTIVE)
-            self.packagePrefixesLabel.config(text=', '.join(packageInfo["remappings"].keys()))
+            self.packagePrefixesLabel.config(text=', '.join(packageInfo["remappings"].to_dict().keys()))
             self.packageUrlHdr.config(state=ACTIVE)
             self.packageUrlLabel.config(text=packageInfo["URL"])
             self.packageDateHdr.config(state=ACTIVE)
@@ -437,7 +440,7 @@ class DialogPackageManager(Toplevel):
                 j = i
                 break
         if 0 <= j < len(packagesList):
-            del self.packagesConfig["packages"][i]
+            del self.packagesConfig["packages"][j]
             self.packagesConfigChanged = True
 
     def addPackageInfo(self, packageInfo):

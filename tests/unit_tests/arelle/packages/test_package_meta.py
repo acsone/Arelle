@@ -1,4 +1,5 @@
 from arelle.packages.package_meta import PackageMeta
+from arelle.utils.mapping.compressed_trie import CompressedTrie
 
 _PACKAGE_CONFIG = {
     "URL": "tests/resources/packages/example.zip",
@@ -28,9 +29,10 @@ _PACKAGE_CONFIG = {
     "publisher": "Example publisher",
     "publisherCountry": "NL",
     "publisherURL": "https://www.example.com/publisher",
-    "remappings": {
-        "https://www.example.com/2024-12-31/": "/example/2024-12-31/"
-    },
+    "remappings": CompressedTrie().load_from_dict({
+        "https://www.example.com/2024-12-31/": "/example/2024-12-31/",
+        "https://www.example.com/": "/example/no_date_suffix/"
+    }),
     "status": "enabled",
     "supersededTaxonomyPackages": [],
     "version": "31 december 2024",
@@ -97,9 +99,10 @@ def test_parse_package_config_full():
     assert package_meta.publisher == "Example publisher"
     assert package_meta.publisher_country == "NL"
     assert package_meta.publisher_url == "https://www.example.com/publisher"
-    assert package_meta.remappings == {
-        "https://www.example.com/2024-12-31/": "/example/2024-12-31/"
-    }
+    mapFrom, mapTo = package_meta.remappings.longest_prefix_match("https://www.example.com/2024-12-31/suffix")
+    assert mapTo == "/example/2024-12-31/"
+    assert mapFrom == "https://www.example.com/2024-12-31/"
+    assert len(package_meta.remappings) == 2
     assert package_meta.status == "enabled"
     assert package_meta.superseded_taxonomy_packages == frozenset()
     assert package_meta.url == "tests/resources/packages/example.zip"

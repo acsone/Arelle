@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
+from arelle.utils.mapping.compressed_trie import CompressedTrie
+
 
 @dataclass(frozen=True)
 class PackageMeta:
@@ -22,7 +24,7 @@ class PackageMeta:
     publisher: str | None
     publisher_country: str | None
     publisher_url: str | None
-    remappings: Mapping[str, str]
+    remappings: CompressedTrie
     status: str | None
     superseded_taxonomy_packages: Set[str]
     url: str
@@ -49,11 +51,7 @@ class PackageMeta:
             publisher=config.get("publisher"),
             publisher_country=config.get("publisherCountry"),
             publisher_url=config.get("publisherURL"),
-            remappings=MappingProxyType({
-                prefix: remapping
-                for prefix, remapping in config.get("remappings", {}).items()
-                if isinstance(prefix, str) and isinstance(remapping, str)
-            }),
+            remappings=CompressedTrie().load_from_dict(config.get("remappings", CompressedTrie()).to_dict()), # copy content
             status=config.get("status"),
             superseded_taxonomy_packages=frozenset(config.get("supersededTaxonomyPackages", [])),
             url=config.get("URL") or "",

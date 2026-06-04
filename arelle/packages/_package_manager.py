@@ -22,6 +22,7 @@ from arelle.packages.PackageType import PackageType
 from arelle.typing import TypeGetText
 from arelle.UrlUtil import isAbsolute, isHttpUrl
 from arelle.XmlValidate import lxmlResolvingParser
+from arelle.utils.mapping.compressed_trie import CompressedTrie, CompressedTrieDecoder, CompressedTrieEncoder
 
 if TYPE_CHECKING:
     from arelle.Cntlr import Cntlr
@@ -119,7 +120,7 @@ class PackageManager:
         metadataFile: str,
         fileBase: str,
         errors: list[str] | None = None,
-    ) -> dict[str, str | dict[str, str]]:
+    ) -> dict[str, str | dict[str, str] | CompressedTrie]:
         if errors is None:
             errors = []
         parser = lxmlResolvingParser(cntlr)
@@ -134,9 +135,9 @@ class PackageManager:
         filesource: FileSource,
         parser: etree.XMLParser,
         metadataFile: str,
-        remappings: dict[str, str],
+        remappings: CompressedTrie,
         errors: list[str],
-    ) -> dict[str, str | dict[str, str]]:
+    ) -> dict[str, str | dict[str, str] | CompressedTrie]:
         from arelle.FileSource import ArchiveFileIOError
 
         unNamedCounter = 1
@@ -276,20 +277,16 @@ class PackageManager:
 
                 #perform prefix remappings
                 remappedUrl = resolvedUrl
-                longestPrefix = 0
                 _remappedUrl: str = remappedUrl if isinstance(remappedUrl, str) else ""
-                for mapFrom, mapTo in remappings.items():
-                    assert isinstance(remappedUrl, str)
-                    if remappedUrl.startswith(mapFrom):
-                        prefixLength = len(mapFrom)
-                        if prefixLength > longestPrefix:
-                            _remappedUrl = remappedUrl[prefixLength:]
-                            if len(_remappedUrl) > 0 and not _remappedUrl.startswith((os.sep, '/')) and not mapTo.endswith((os.sep, '/')):
-                                _remappedUrl = mapTo + os.sep + _remappedUrl
-                            else:
-                                _remappedUrl = mapTo + _remappedUrl
-                            longestPrefix = prefixLength
-                if longestPrefix:
+                assert isinstance(remappedUrl, str)
+                mapFrom, mapTo = remappings.longest_prefix_match(remappedUrl)
+                if mapFrom is not None and mapTo is not None:
+                    prefixLength = len(mapFrom)
+                    _remappedUrl = remappedUrl[prefixLength:]
+                    if len(_remappedUrl) > 0 and not _remappedUrl.startswith((os.sep, '/')) and not mapTo.endswith((os.sep, '/')):
+                        _remappedUrl = mapTo + os.sep + _remappedUrl
+                    else:
+                        _remappedUrl = mapTo + _remappedUrl
                     remappedUrl = _remappedUrl.replace(os.sep, "/")  # always used as FileSource select
 
                 # find closest language description
@@ -318,9 +315,9 @@ class PackageManager:
         catalogFile: str,
         fileBase: str,
         errors: list[str],
-    ) -> dict[str, str]:
+    ) -> CompressedTrie:
         from arelle.FileSource import ArchiveFileIOError
-        remappings = {}
+        remappings = CompressedTrie()
         rewriteTree = None
         try:
             _file = filesource.file(catalogFile)[0]
@@ -382,15 +379,16 @@ class PackageManager:
         if loadPackagesConfig:
             try:
                 self.packagesJsonFile = cntlr.userAppDir + os.sep + "taxonomyPackages.json"
+                assert self.packagesJsonFile is not None
                 with open(self.packagesJsonFile, encoding='utf-8') as f:
-                    self.packagesConfig = json.load(f)
+                    self.packagesConfig = json.load(f, cls=CompressedTrieDecoder)
                 self.packagesConfigChanged = False
             except Exception:
                 pass # on GAE no userAppDir, will always come here
         if not self.packagesConfig:
             self.packagesConfig = {  # savable/reloadable package configuration
                 "packages": [], # list taxonomy packages loaded and their remappings
-                "remappings": {}  # dict by prefix of remappings in effect
+                "remappings": CompressedTrie()  # dict by prefix of remappings in effect
             }
             self.packagesConfigChanged = False # don't save until something is added to packagesConfig
         self._cntlr = cntlr
@@ -401,7 +399,7 @@ class PackageManager:
         if self.packagesMappings:
             self.packagesMappings.clear()
 
-    def orderedPackagesConfig(self) -> dict[str, Any]:
+    def orderedPackagesConfig(self, keepRemappingsAsTrie: bool = False) -> dict[str, Any]:
         _cfg = self._getPackagesConfig()
         _field_order = {
             'name': '01',
@@ -423,6 +421,9 @@ class PackageManager:
         def _package_sort_key(k: tuple[str, Any]) -> str:
             return _field_order.get(str(k[0]), str(k[0]))
 
+        remappings = dict(sorted(_cfg['remappings'].to_dict().items()))
+        if keepRemappingsAsTrie:
+            remappings = CompressedTrie().load_from_dict(remappings)
         return dict(
             (
                 (
@@ -432,7 +433,7 @@ class PackageManager:
                         for _packageInfo in _cfg['packages']
                     ],
                 ),
-                ('remappings', dict(sorted(_cfg['remappings'].items()))),
+                ('remappings', remappings),
             )
         )
 
@@ -440,7 +441,8 @@ class PackageManager:
         if self.packagesConfigChanged and cntlr.hasFileSystem:
             assert self.packagesJsonFile is not None
             with open(self.packagesJsonFile, "w", encoding='utf-8') as f:
-                jsonStr = str(json.dumps(self.orderedPackagesConfig(), ensure_ascii=False, indent=2)) # might not be unicode in 2.7
+                jsonStr = str(json.dumps(self.orderedPackagesConfig(keepRemappingsAsTrie=True), ensure_ascii=False, indent=2,
+                                         cls=CompressedTrieEncoder)) # might not be unicode in 2.7
                 f.write(jsonStr)
             self.packagesConfigChanged = False
 
@@ -451,7 +453,7 @@ class PackageManager:
     ''' packagesConfig structure
     {
      'packages':  [list of package dicts in order of application],
-     'remappings': dict of prefix:url remappings
+     'remappings': CompressedTrie of prefix:url remappings
     }
     package dict
     {
@@ -461,7 +463,7 @@ class PackageManager:
         'fileDate': 2001-01-01
         'url': web http (before caching) or local file location
         'description': text
-        'remappings': dict of prefix:url of each remapping
+        'remappings': CompressedTrie of prefix:url of each remapping
     }
     '''
 
@@ -548,7 +550,7 @@ class PackageManager:
             filesource: FileSource | None = None
             try:
                 parts = archiveFilenameParts(packageFilename)
-                fileDateTuple: time.struct_time | tuple[int, ...]
+                fileDateTuple: time.struct_time | tuple[int, int, int, int, int, int, int, int, int]
                 sourceFileSource: FileSource | None = None
                 if parts is not None:
                     sourceFileSource = openFileSource(parts[0], self._getCntlr())
@@ -558,6 +560,7 @@ class PackageManager:
                 else:
                     fileDateTuple = time.gmtime(os.path.getmtime(packageFilename))
                 filesource = openFileSource(packageFilename, self._getCntlr(), sourceFileSource=sourceFileSource)
+                assert filesource is not None
                 if sourceFileSource:
                     sourceFileSource.close()
                 # allow multiple manifests [[metadata, prefix]...] for multiple catalogs
@@ -566,10 +569,10 @@ class PackageManager:
                 if filesource.isZip:
                     PackageManager.validateTaxonomyPackage(cntlr, filesource, errors)
                     packageFiles = PackageManager.discoverPackageFiles(filesource)
+                    _metaInf = f'{os.path.splitext(os.path.basename(packageFilename))[0]}/META-INF/'
                     if not packageFiles:
                         # look for pre-PWD packages
                         _dir = filesource.dir or []
-                        _metaInf = f'{os.path.splitext(os.path.basename(packageFilename))[0]}/META-INF/'
                         if packageManifestName:
                             # pre-pwd
                             packageFiles = [fileName
@@ -619,7 +622,7 @@ class PackageManager:
                     else:
                         raise OSError(_("File must be a taxonomy package (zip file), catalog file, or manifest (): {0}.")
                                       .format(packageFilename, ', '.join(TAXONOMY_PACKAGE_FILE_NAMES)))
-                remappings = {}
+                remappings = CompressedTrie()
                 packageNames: list[str] = []
                 descriptions: list[str] = []
                 for packageFileUrl, packageFilePrefix, packageFile in packages:
@@ -631,8 +634,8 @@ class PackageManager:
                         if parsedPackage.get('description'):
                             descriptions.append(str(parsedPackage['description']))
                         _remappings = parsedPackage["remappings"]
-                        assert isinstance(_remappings, dict)
-                        for prefix, remapping in _remappings.items():
+                        assert isinstance(_remappings, CompressedTrie)
+                        for prefix, remapping in _remappings.to_dict().items():
                             if prefix not in remappings:
                                 remappings[prefix] = remapping
                             else:
@@ -680,7 +683,7 @@ class PackageManager:
         for _packageInfo in self._getPackagesConfig()["packages"]:
             _packageInfoURL = _packageInfo['URL']
             if _packageInfo['status'] == 'enabled':
-                for prefix, remapping in _packageInfo['remappings'].items():
+                for prefix, remapping in _packageInfo['remappings'].to_dict().items():
                     remappings[prefix] = remapping
                     remapOverlapUrls.append( (prefix, _packageInfoURL, remapping) )
         remapOverlapUrls.sort()
@@ -706,24 +709,26 @@ class PackageManager:
                         file=(_url1, _url2),
                     )
 
+    @staticmethod
+    def _mapping_condition(s: str, value:str) -> bool:
+        return not s.startswith(value)
+
+    @staticmethod
+    def _stop_condition(s: str, value:str) -> bool:
+        return s.startswith(value)
+
     def isMappedUrl(self, url: str | None) -> bool:
-        return (self.packagesConfig is not None and url is not None and
-                any(url.startswith(mapFrom) and not url.startswith(mapTo) # prevent recursion in mapping for url hosted Packages
-                    for mapFrom, mapTo in self.packagesConfig.get('remappings', {}).items()))
+        if self.packagesConfig is None or url is None:
+            return False
+        # prevent recursion in mapping for url hosted Packages thanks to _mapping_condition
+        mapFrom, mapTo = self.packagesConfig["remappings"].longest_prefix_match(url, post_condition=self._mapping_condition)
+        return mapFrom is not None and mapTo is not None
 
     def mappedUrl(self, url: str | None) -> str | None:
         if self.packagesConfig is not None and url is not None:
-            longestPrefix = 0
-            mapped: str | None = None
-            for mapFrom, mapTo in self.packagesConfig.get('remappings', {}).items():
-                if url.startswith(mapFrom):
-                    if url.startswith(mapTo):
-                        return url # recursive mapping, this is already mapped
-                    prefixLength = len(mapFrom)
-                    if prefixLength > longestPrefix:
-                        mapped = mapTo + url[prefixLength:]
-                        longestPrefix = prefixLength
-            if longestPrefix:
+            mapFrom, mapTo = self.packagesConfig["remappings"].longest_prefix_match(url, stop_condition=self._stop_condition)
+            if mapFrom is not None and mapTo is not None:
+                mapped = mapTo + url[len(mapFrom):]
                 return mapped
         return url
 

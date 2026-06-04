@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 from arelle import PackageManager
+from arelle.utils.mapping.compressed_trie import CompressedTrie
 
 
 def test_package_manager_init_first_pass():
@@ -14,7 +15,7 @@ def test_package_manager_init_first_pass():
     assert isinstance(PackageManager.packagesConfig.get('packages'), list)
     assert len(PackageManager.packagesConfig.get('packages')) == 0
     assert 'remappings' in PackageManager.packagesConfig
-    assert isinstance(PackageManager.packagesConfig.get('remappings'), dict)
+    assert isinstance(PackageManager.packagesConfig.get('remappings'), CompressedTrie)
     assert len(PackageManager.packagesConfig.get('remappings')) == 0
     assert PackageManager._cntlr == cntlr
 
@@ -32,7 +33,7 @@ def test_package_manager_init_config_already_exists():
     assert isinstance(PackageManager.packagesConfig.get('packages'), list)
     assert len(PackageManager.packagesConfig.get('packages')) == 0
     assert 'remappings' in PackageManager.packagesConfig
-    assert isinstance(PackageManager.packagesConfig.get('remappings'), dict)
+    assert isinstance(PackageManager.packagesConfig.get('remappings'), CompressedTrie)
     assert len(PackageManager.packagesConfig.get('remappings')) == 0
     assert PackageManager._cntlr == cntlr
 

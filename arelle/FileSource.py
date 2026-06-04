@@ -24,6 +24,7 @@ from arelle.packages.report.DetectReportPackage import isReportPackageExtension
 from arelle.packages.report.ReportPackage import ReportPackage
 from arelle.typing import TypeGetText
 from arelle.UrlUtil import isHttpUrl
+from arelle.utils.mapping.compressed_trie import CompressedTrie
 
 _: TypeGetText
 
@@ -168,8 +169,8 @@ class FileSource:
     url: str | list[str] | None
     basefile: str | list[str] | None
     xfdDocument: etree._ElementTree | None
-    taxonomyPackage: dict[str, str | dict[str, str]] | None
-    mappedPaths: dict[str, str] | None
+    taxonomyPackage: dict[str, str | dict[str, str] | CompressedTrie] | None
+    mappedPaths: CompressedTrie
 
     def __init__(self, url: str, cntlr: Cntlr | None = None, checkIfXmlIsEis: bool = False) -> None:
         self.url = str(url)  # allow either string or FileNamedStringIO
@@ -192,7 +193,7 @@ class FileSource:
         self.filesDir = None
         self.referencedFileSources = {}  # archive file name, fileSource object
         self.taxonomyPackage = None # taxonomy package
-        self.mappedPaths = None  # remappings of path segments may be loaded by taxonomyPackage manifest
+        self.mappedPaths = CompressedTrie()  # remappings of path segments may be loaded by taxonomyPackage manifest
         self.isValid = True # filesource is assumed to be valid until a call to open fails.
         if not self.isZip:
             # Try to detect zip files with unrecognized file extensions.
@@ -389,9 +390,8 @@ class FileSource:
 
     def loadTaxonomyPackageMappings(self, errors: list[str] | None = None, expectTaxonomyPackage: bool = False) -> None:
         # Only attempt to load taxonomy package mappings one time.
-        if self.mappedPaths is not None:
+        if not self.mappedPaths.is_empty():
             return
-        self.mappedPaths = {}
 
         if errors is None:
             errors = []
@@ -403,7 +403,7 @@ class FileSource:
                                                                    os.sep.join(os.path.split(metadata)[:-1]) + os.sep,
                                                                    errors=errors)
                 assert self.taxonomyPackage is not None
-                self.mappedPaths = cast('dict[str, str]', self.taxonomyPackage.get("remappings"))
+                self.mappedPaths = cast('CompressedTrie', self.taxonomyPackage.get("remappings"))
 
     def openZipStream(self, sourceZipStream: BinaryIO) -> None:
         if not self.isOpen:
@@ -492,20 +492,18 @@ class FileSource:
         return True # True only means that the filepath maps into the archive, not that the file is really there
 
     def isMappedUrl(self, url: str) -> bool:
-        if self.mappedPaths is not None:
-            if any(url.startswith(mapFrom)
-                       for mapFrom in self.mappedPaths):
+        if not self.mappedPaths.is_empty():
+            if self.mappedPaths.is_prefix_matching(url):
                 return True
         if self.cntlr and self.cntlr.modelManager.disclosureSystem.isMappedUrl(url):
             return True
         return False
 
     def mappedUrl(self, url: str) -> str:
-        if self.mappedPaths:
-            for mapFrom, mapTo in self.mappedPaths.items():
-                if url.startswith(mapFrom):
-                    url = mapTo + url[len(mapFrom):]
-                    break
+        if not self.mappedPaths.is_empty():
+            found_prefix, found_value = self.mappedPaths.longest_prefix_match(url)
+            if found_prefix and found_value:
+                url = found_value + url[len(found_prefix):]
         if self.cntlr:
             return self.cntlr.modelManager.disclosureSystem.mappedUrl(url)
         return url

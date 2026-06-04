@@ -49,4 +49,4 @@ class PackageRegistry:
         return self._package_manager.mappedUrl(url)
 
     def rebuild(self) -> None:
-        return self._package_manager.rebuildRemappings()
+        self._package_manager.rebuildRemappings()
