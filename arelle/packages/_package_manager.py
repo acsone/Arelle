@@ -375,35 +375,39 @@ class PackageManager:
         assert self._cntlr is not None, "PackageManager.init() must be called before use"
         return self._cntlr
 
-    def _postprocess_configuration(self, packagesConfig: dict[str, Any]) -> None:
+    def _postprocess_configuration(self, packagesConfig: dict[str, Any]) -> bool:
         """Perform the replacement of "remapping" entries in loaded configuration.
 
         This method modifies the provided configuration in-place.
         """
+        is_modified = False
         if isinstance(packagesConfig, dict):
             if "remappings" in packagesConfig:
                 remappings_as_dict = packagesConfig["remappings"]
                 if isinstance(remappings_as_dict, dict):
                     remappings = CompressedTrie().load_from_dict(packagesConfig["remappings"])
                     packagesConfig["remappings"] = remappings
+                    is_modified = True
             if "packages" in packagesConfig:
                 for package in packagesConfig["packages"]:
                     if isinstance(package, dict) and "remappings" in package:
-                        remappings_as_dict = packagesConfig["remappings"]
+                        remappings_as_dict = package["remappings"]
                         if isinstance(remappings_as_dict, dict):
                             remappings = CompressedTrie().load_from_dict(package["remappings"])
                             package["remappings"] = remappings
+                            is_modified = True
+        return is_modified
 
     def init(self, cntlr: Cntlr, loadPackagesConfig: bool = True) -> None:
         if loadPackagesConfig:
             try:
                 self.packagesJsonFile = cntlr.userAppDir + os.sep + "taxonomyPackages.json"
                 assert self.packagesJsonFile is not None
+                self.packagesConfigChanged = False
                 with open(self.packagesJsonFile, encoding='utf-8') as f:
                     temp_configuration = json.load(f, cls=CompressedTrieDecoder)
-                    self._postprocess_configuration(temp_configuration) # As a side effect, modifies temp_configuration
+                    self.packagesConfigChanged = self._postprocess_configuration(temp_configuration) # As a side effect, modifies temp_configuration
                     self.packagesConfig = temp_configuration
-                self.packagesConfigChanged = False
             except Exception:
                 pass # on GAE no userAppDir, will always come here
         if not self.packagesConfig:
