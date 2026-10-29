@@ -39,7 +39,7 @@ dependencies = [
     'openpyxl>=3,<4',
     'pillow>=10,<13',
     'pyparsing>=3,<4',
-    'python-dateutil>=2,<3',
+    'python-dateutil>=2,<4',
     'regex',
     'truststore>=0,<1',
     'typing-extensions>=4,<5',
@@ -47,10 +47,10 @@ dependencies = [
 
 [project.optional-dependencies]
 Crypto = [
-    'pycryptodome>=3,<4',
+    'pycryptodome>=3,<5',
 ]
 DB = [
-    'oracledb>=3,<5',
+    'oracledb>=3,<27',
     'pg8000>=1,<2',
     'PyMySQL>=1,<2',
     'pyodbc>=4,<6',
